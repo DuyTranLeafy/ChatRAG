@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Tuyển Sinh</title>
+    <link rel="stylesheet" href="static/styles.css">
+</head>
+
+<body>
+    <div class="chatbox">
+        <div class="header">Chatbot Tuyển Sinh trường Đại học Sư Phạm Kỹ thuật Thành phố Hồ Chí Minh</div>
+        <div id="chat-messages"></div>
+        <form id="chat-form">
+            <input type="text" id="question" placeholder="Nhập tin nhắn..." />
+            <button type="submit">+</button>
+        </form>
+    </div>
+
+    <script>
+        const chatForm = document.getElementById('chat-form');
+        const chatMessages = document.getElementById('chat-messages');
+        const questionInput = document.getElementById('question');
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const question = questionInput.value.trim();
+            if (!question) return;
+
+            // Hiển thị tin nhắn của người dùng
+            const questionHTML = `
+                <div class="message user">
+                    <span>${question}</span>
+                </div>`;
+            chatMessages.innerHTML += questionHTML;
+
+            // Gửi yêu cầu đến server
+            const response = await fetch('/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question }),
+            });
+
+            const result = await response.json();
+            const answer = result.answer || "Xin lỗi, tôi không thể trả lời câu hỏi này.";
+
+            // Hiển thị câu trả lời từ bot với hiệu ứng
+            const answerHTML = `
+                <div class="message bot fade-in">
+                    <span>${answer}</span>
+                </div>`;
+            chatMessages.innerHTML += answerHTML;
+
+            // Tự động cuộn xuống cuối
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            questionInput.value = '';
+        });
+    </script>
+</body>
+
+</html>

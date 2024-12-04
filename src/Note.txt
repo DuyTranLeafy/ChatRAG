@@ -1,0 +1,90 @@
+==================================Main.py========================================
+
+# pdf_files = [
+    #     Path('Documents/Final_25_05_HieuChinh_K23___CTDT_CNTT_150TC_23_24_.pdf'),
+    # ]
+    #
+    # # Khởi tạo đối tượng PDFReader
+    # pdf_reader = PDFReader(return_full_document=False)
+    #
+    # # Duyệt qua từng file PDF và tải dữ liệu
+    # for pdf_path in pdf_files:
+    #     print(f"Processing file: {pdf_path.name}")
+    #     documents = pdf_reader.load_data(file=pdf_path)
+    #
+    #     # Xử lý dữ liệu tài liệu
+    #     for doc in documents:
+    #         print(f"Metadata: {doc.metadata}")
+    #         print(f"Text: {doc.text[:500]}...")
+    #
+    #
+    # # Define file paths
+    # csv_file_path = Path('Documents/Library_Services_20240831.csv')
+    # # excel_file_path = Path('data/example.xlsx')
+    #
+    # # Create a TabularParser instance
+    # parser = TabularParser(
+    #     concat_rows=True,
+    #     col_joiner=", ",
+    #     row_joiner="\n",
+    #     pandas_config={"header": None},  # Example pandas config for Excel
+    #     sheet_name=0  # Example to read the first sheet
+    # )
+    #
+    # # Load data from CSV
+    # print("Loading CSV Data...")
+    # csv_documents = parser.load_data(csv_file_path)
+    # for doc in csv_documents:
+    #     print(f"Document text from CSV:\n{doc['text']}\n")
+    #     print(f"Metadata: {doc['metadata']}\n")
+    #
+    # # # Load data from Excel
+    # # print("Loading Excel Data...")
+    # # excel_documents = parser.load_data(excel_file_path)
+    # # for doc in excel_documents:
+    # #     print(f"Document text from Excel:\n{doc['text']}\n")
+    # #     print(f"Metadata: {doc['metadata']}\n")
+
+    # Nối tất cả văn bản từ các tài liệu thành một chuỗi duy nhất
+    #input_text = '\n\n'.join('\n'.join(section) for sections in results.values() for section in sections)
+
+    # input_text = (
+    #     "Berlin is the capital and largest city of Germany, both by area and by population. "
+    #     "Its more than 3.85 million inhabitants make it the European Union's most populous city, "
+    #     "as measured by population within city limits. The city is also one of the states of Germany, "
+    #     "and is the third smallest state in the country in terms of area.\n\n"
+    #     "Paris is known for its art, gastronomy, and culture. It is the capital of France and a major European city.\n\n"
+    #     "New York is a city in the United States known for its skyline, culture, and diverse population. "
+    #     "It is often referred to as the 'City that Never Sleeps' due to its vibrant nightlife and busy streets."
+    # )
+
+    #
+    # # Tạo chỉ mục
+    # es_manager = ElasticsearchManager()
+    # es_manager.create_index("text_chunks")
+    #
+    # # Thêm các đoạn văn bản vào chỉ mục
+    # for i, chunk in enumerate(chunks):
+    #     es_manager.index_document("text_chunks", i, {"text": chunk})
+    #
+    # # Tìm kiếm một từ khóa
+    # search_result = es_manager.search("text_chunks", "sinh viên")
+    # print(search_result)
+
+    #
+    # model_name = 'jinaai/jina-embeddings-v2-base-en'  # Default model
+    # chunk_size = 10  # Define the chunk size
+    # processor = LateChunkRAGDataProcessor(model_name, chunk_size)
+    #
+    # # Example data
+    # data = [input_text]
+    #
+    # # Process entire dataset in chunks
+    # processed_data = processor.late_chunk_and_tokenize(data)
+    #
+    # # Example query processing
+    # query = "Trường Đại học Sư phạm kỹ thuật"
+    # tokenized_query = processor.process_query(query)
+    # processor.print_tokenized_chunks(tokenized_query)
+
+
