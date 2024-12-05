@@ -1,7 +1,6 @@
 import fitz  # PyMuPDF
-from typing import List, Dict, Optional
+from typing import List, Optional
 from pathlib import Path
-from Document import Document
 
 class PDFReader:
     def __init__(self, file_paths, return_full_document: Optional[bool] = False) -> None:
@@ -56,9 +55,9 @@ class PDFReader:
 
         return sections
 
-    def process_documents(self) -> List[Document]:
+    def process_documents(self) -> List['Document']:
         """
-        Xử lý tất cả các tài liệu PDF trong file_paths và trả về chúng dưới dạng các đối tượng Document.
+        Process all the PDF documents in file_paths and return them as Document objects.
         """
         all_sections = []
 
@@ -71,8 +70,18 @@ class PDFReader:
             pages = self.read_pdf_document(file_path)
             sections = self.split_by_format(pages)
 
-            # Tạo các đối tượng Document từ các phần văn bản
-            documents = [Document(section) for section in sections]
+            # Create Document objects from the sections
+            documents = [self.Document(content=section) for section in sections]
             all_sections.extend(documents)
 
         return all_sections
+
+    class Document:
+        def __init__(self, content, metadata=None):
+            self.page_content = content
+            self.text = content  # Thêm thuộc tính 'text' để tương thích
+            self.metadata = metadata if metadata is not None else {}
+
+        def __str__(self):
+            return f"Document(content={self.page_content[:50]}..., metadata={self.metadata})"
+

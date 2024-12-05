@@ -2,6 +2,8 @@ from flask import Flask, render_template, request, jsonify
 from RAG import RAGPipeline, DocumentStore, CustomEmbeddings
 from RAG.retrieval import Document
 from Reader.WordReader import WordReader  # Đọc file Word
+from Reader.PDFReader import PDFReader
+from Reader.SheetReader import SheetReader
 from dotenv import load_dotenv  # Để sử dụng biến môi trường
 import os
 
@@ -55,7 +57,7 @@ if __name__ == "__main__":
 
     # Đường dẫn đến thư mục chứa tài liệu
     directory_path = "doc"  # Thay đổi nếu cần
-    extensions = [".docx"]  # Có thể thêm các định dạng khác như ".pdf" nếu cần
+    extensions = [".docx", ".pdf", "xlsx"]  # Có thể thêm các định dạng khác nếu cần
 
     # Tìm tất cả các file phù hợp trong thư mục
     file_paths = get_file_paths_from_directory(directory_path, extensions)
@@ -63,10 +65,29 @@ if __name__ == "__main__":
         print("❌ Không tìm thấy tài liệu trong thư mục. Vui lòng kiểm tra đường dẫn hoặc định dạng tệp.")
         exit()
 
-    # Tạo đối tượng WordReader để xử lý tài liệu Word
+    # Tạo danh sách sections từ các tài liệu
+    sections = []
     try:
-        word_reader = WordReader(file_paths)
-        sections = word_reader.process_documents()
+        # Xử lý tài liệu Word
+        word_files = [f for f in file_paths if f.endswith(".docx")]
+        if word_files:
+            word_reader = WordReader(word_files)
+            sections.extend(word_reader.process_documents())
+
+        # Xử lý tài liệu PDF
+        pdf_files = [f for f in file_paths if f.endswith(".pdf")]
+        if pdf_files:
+            pdf_reader = PDFReader(pdf_files)
+            pdf_sections = pdf_reader.process_documents()
+            sections.extend([doc.text for doc in pdf_sections])  # Lấy nội dung từ các Document
+
+        # Xử lý tài liệu Excel
+        sheet_files = [f for f in file_paths if f.endswith(".xlsx")]
+        if sheet_files:
+            sheet_reader = SheetReader(sheet_files)
+            sheet_sections = sheet_reader.process_documents()
+            sections.extend([doc.text for doc in sheet_sections])  # Lấy nội dung từ các Document
+
     except Exception as e:
         print(f"❌ Lỗi khi xử lý tài liệu: {str(e)}")
         exit()

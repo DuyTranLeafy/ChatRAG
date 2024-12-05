@@ -1,110 +1,89 @@
-from pathlib import Path
-from typing import Any, Dict, List, Optional
-from fsspec import AbstractFileSystem
-import importlib
-
 import pandas as pd
+import os
 
 
-class TabularParser:
-    """A class to parse tabular data from CSV and Excel files."""
+class TextWrapper:
+    """
+    Lớp để bọc dữ liệu và cung cấp thuộc tính `.text`.
+    """
+    def __init__(self, content):
+        self.text = content
 
-    def __init__(
-            self,
-            concat_rows: bool = True,
-            col_joiner: str = ", ",
-            row_joiner: str = "\n",
-            pandas_config: dict = {},
-            sheet_name=None
-    ) -> None:
-        """Init params."""
-        self._concat_rows = concat_rows
-        self._col_joiner = col_joiner
-        self._row_joiner = row_joiner
-        self._pandas_config = pandas_config
-        self._sheet_name = sheet_name
+    def __str__(self):
+        return self.text  # Để in ra nội dung trực tiếp
 
-    def load_data(
-            self,
-            file: Path,
-            extra_info: Optional[Dict] = None,
-            fs: Optional[AbstractFileSystem] = None,
-    ) -> List[Dict[str, Any]]:
-        """Parse file based on its extension and return a list of document-like dicts."""
-        extension = file.suffix.lower()
-        if extension == '.csv':
-            return self._load_csv(file, extra_info, fs)
-        elif extension in ['.xls', '.xlsx']:
-            return self._load_excel(file, extra_info, fs)
-        else:
-            raise ValueError(f"Unsupported file extension: {extension}")
 
-    def _load_csv(
-            self,
-            file: Path,
-            extra_info: Optional[Dict] = None,
-            fs: Optional[AbstractFileSystem] = None,
-    ) -> List[Dict[str, Any]]:
-        """Parse CSV file."""
+class SheetReader:
+    def __init__(self, file_paths):
+        self.file_paths = file_paths
+
+    def read_excel_file(self, file_path):
+        """
+        Đọc file Excel và trả về dữ liệu từ tất cả các sheet.
+        :param file_path: Đường dẫn đến file Excel.
+        :return: Dictionary chứa tên sheet và dữ liệu của mỗi sheet.
+        """
         try:
-            import csv
-        except ImportError:
-            raise ImportError("csv module is required to read CSV files.")
+            # Đọc tất cả các sheet trong file Excel
+            sheets = pd.read_excel(file_path, sheet_name=None)  # Đọc tất cả các sheet
+            return sheets
+        except Exception as e:
+            print(f"❌ Lỗi khi đọc file {file_path}: {str(e)}")
+            return {}
 
-        text_list = []
-        if fs:
-            with fs.open(file) as fp:
-                csv_reader = csv.reader(fp)
-                for row in csv_reader:
-                    text_list.append(", ".join(row))
-        else:
-            with open(file) as fp:
-                csv_reader = csv.reader(fp)
-                for row in csv_reader:
-                    text_list.append(", ".join(row))
+    def split_by_format(self, data):
+        """
+        Phân chia dữ liệu của Excel thành các phần (section) dưới dạng text (văn bản).
+        :param data: Dữ liệu của các sheet.
+        :return: Danh sách các section dưới dạng đối tượng TextWrapper.
+        """
+        sections = []
+        for sheet_name, sheet_data in data.items():
+            print(f"Đang xử lý sheet: {sheet_name}")
 
-        metadata = {"filename": file.name, "extension": file.suffix}
-        if extra_info:
-            metadata.update(extra_info)
+            # Kiểm tra kiểu dữ liệu của sheet_data
+            if isinstance(sheet_data, pd.DataFrame):
+                print(f"Dữ liệu của sheet là DataFrame.")
 
-        if self._concat_rows:
-            return [{"text": "\n".join(text_list), "metadata": metadata}]
-        else:
-            return [{"text": text, "metadata": metadata} for text in text_list]
+                # Chuyển DataFrame thành text (văn bản)
+                section = f"Sheet: {sheet_name}\n"
+                section += sheet_data.to_string(index=False)  # Chuyển DataFrame thành chuỗi văn bản
 
-    def _load_excel(
-            self,
-            file: Path,
-            extra_info: Optional[Dict] = None,
-            fs: Optional[AbstractFileSystem] = None,
-    ) -> List[Dict[str, Any]]:
-        """Parse Excel file."""
-        openpyxl_spec = importlib.util.find_spec("openpyxl")
-        if openpyxl_spec is None:
-            raise ImportError(
-                "Please install openpyxl to read Excel files. You can install it with 'pip install openpyxl'")
-
-        if fs:
-            with fs.open(file) as f:
-                dfs = pd.read_excel(f, self._sheet_name, **self._pandas_config)
-        else:
-            dfs = pd.read_excel(file, self._sheet_name, **self._pandas_config)
-
-        documents = []
-        if isinstance(dfs, pd.DataFrame):
-            df = dfs.fillna("")
-            text_list = df.astype(str).apply(lambda row: " ".join(row.values), axis=1).tolist()
-            if self._concat_rows:
-                documents.append({"text": "\n".join(text_list), "metadata": extra_info or {}})
+                # Bọc dữ liệu bằng TextWrapper
+                sections.append(TextWrapper(section))
+            elif isinstance(sheet_data, str):
+                # Nếu sheet_data là chuỗi, bọc vào TextWrapper
+                section = f"Sheet: {sheet_name}\n{sheet_data}"
+                sections.append(TextWrapper(section))
             else:
-                documents.extend([{"text": text, "metadata": extra_info or {}} for text in text_list])
-        else:
-            for df in dfs.values():
-                df = df.fillna("")
-                text_list = df.astype(str).apply(lambda row: " ".join(row), axis=1).tolist()
-                if self._concat_rows:
-                    documents.append({"text": "\n".join(text_list), "metadata": extra_info or {}})
-                else:
-                    documents.extend([{"text": text, "metadata": extra_info or {}} for text in text_list])
+                # Nếu không phải DataFrame hoặc chuỗi, chuyển thành chuỗi trước khi bọc
+                section = f"Sheet: {sheet_name}\n{str(sheet_data)}"
+                sections.append(TextWrapper(section))
 
-        return documents
+        return sections
+
+    def process_documents(self):
+        """
+        Xử lý tất cả các file Excel được cung cấp và trích xuất dữ liệu từ các sheet.
+        :return: Danh sách các sections dưới dạng đối tượng TextWrapper.
+        """
+        all_sections = []
+        try:
+            for file_path in self.file_paths:
+                print(f"Đang xử lý file: {file_path}")
+                if os.path.exists(file_path):
+                    sheets = self.read_excel_file(file_path)
+                    if not sheets:
+                        print(f"⚠️ Không có sheet nào trong file {file_path}")
+                        continue
+
+                    sections = self.split_by_format(sheets)
+
+                    # Chỉ lấy các sections có nhiều dữ liệu
+                    filtered_sections = [section for section in sections if len(section.text.splitlines()) > 1]
+                    all_sections.extend(filtered_sections)
+
+            return all_sections
+        except Exception as e:
+            print(f"❌ Lỗi khi xử lý tài liệu Excel: {str(e)}")
+            return []

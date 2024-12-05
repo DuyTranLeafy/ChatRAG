@@ -1,4 +1,3 @@
-from Document import Document
 from docx import Document as DocxDocument
 import os
 
@@ -7,53 +6,69 @@ class WordReader:
         self.file_paths = file_paths
 
     def read_word_document(self, file_path):
-        # Đọc tài liệu Word
-        doc = DocxDocument(file_path)
-        paragraphs = []
-
-        for para in doc.paragraphs:
-            # Thêm đối tượng đoạn văn vào danh sách
-            paragraphs.append(para)
-
-        return paragraphs
+        """
+        Đọc tài liệu Word và trả về danh sách các đoạn văn.
+        :param file_path: Đường dẫn đến file Word.
+        :return: Danh sách các đoạn văn.
+        """
+        try:
+            doc = DocxDocument(file_path)
+            paragraphs = [para for para in doc.paragraphs if para.text.strip()]  # Lọc đoạn văn không rỗng
+            return paragraphs
+        except Exception as e:
+            print(f"❌ Lỗi khi đọc file {file_path}: {str(e)}")
+            return []
 
     def is_bold_and_uppercase(self, paragraph):
-        # Kiểm tra xem đoạn văn có chứa văn bản in đậm và viết hoa toàn bộ không
+        """
+        Kiểm tra xem đoạn văn có chứa văn bản in đậm và viết hoa toàn bộ không.
+        :param paragraph: Đối tượng đoạn văn của docx.
+        :return: True nếu đoạn văn có định dạng in đậm và viết hoa toàn bộ, False nếu không.
+        """
         text = paragraph.text.strip()
-        return any(run.bold for run in paragraph.runs) and text.isupper()
+        return any(run.bold for run in paragraph.runs) and any(word.isupper() for word in text.split())
 
     def split_by_format(self, paragraphs):
-        # Phân đoạn văn bản dựa trên định dạng
+        """
+        Phân đoạn văn bản dựa trên định dạng tiêu đề.
+        :param paragraphs: Danh sách các đoạn văn từ tài liệu Word.
+        :return: Danh sách các section được phân tách.
+        """
         sections = []
         current_section = []
 
         for paragraph in paragraphs:
-            paragraph_text = paragraph.text
             if self.is_bold_and_uppercase(paragraph):
+                # Nếu gặp tiêu đề mới, chỉ tách khi tiêu đề có một sự thay đổi rõ rệt
                 if current_section:
-                    sections.append("\n".join([p.text for p in current_section]))
+                    sections.append("\n".join([p.text.strip() for p in current_section if p.text.strip()]))
                     current_section = []
-                current_section.append(paragraph)
+                current_section.append(paragraph)  # Tiêu đề là phần đầu tiên của section mới
             else:
                 current_section.append(paragraph)
 
+        # Thêm section cuối cùng (nếu có)
         if current_section:
-            sections.append("\n".join([p.text for p in current_section]))
+            sections.append("\n".join([p.text.strip() for p in current_section if p.text.strip()]))
 
         return sections
 
     def process_documents(self):
-        all_sections = []
+        """
+        Xử lý tất cả các file Word được cung cấp, trích xuất tất cả nội dung một lần.
+        """
+        try:
+            all_paragraphs = [
+                para
+                for file_path in self.file_paths if os.path.exists(file_path)
+                for para in self.read_word_document(file_path)
+            ]
+            sections = self.split_by_format(all_paragraphs)
 
-        for file_path in self.file_paths:
-            if not os.path.exists(file_path):
-                print(f"File does not exist: {file_path}")
-                continue
-
-            paragraphs = self.read_word_document(file_path)
-            sections = self.split_by_format(paragraphs)
-            # Tạo các đối tượng Document từ các đoạn văn bản
-            documents = [Document(section) for section in sections]
-            all_sections.extend(documents)
-
-        return all_sections
+            # Nếu số lượng sections quá nhiều, chỉ lấy những section quan trọng
+            # (Giảm bớt các section không cần thiết)
+            filtered_sections = [section.strip() for section in sections if len(section.splitlines()) > 1]
+            return filtered_sections
+        except Exception as e:
+            print(f"❌ Lỗi khi xử lý tài liệu: {str(e)}")
+            return []
